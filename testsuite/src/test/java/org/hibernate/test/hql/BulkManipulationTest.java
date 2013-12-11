@@ -766,7 +766,7 @@ public class BulkManipulationTest extends FunctionalTestCase {
 		Animal tadpole = ( Animal ) s.load( Animal.class, data.polliwog.getId() );
 		assertEquals( "Update did not take effect", "Tadpole", tadpole.getDescription() );
 
-		count = s.createQuery( "update Animal set bodyWeight = bodyWeight + :w1 + :w2" )
+		count = s.createQuery( "update Animal set bodyWeight = bodyWeight + (:w1 + :w2)" )
 				.setDouble( "w1", 1 )
 				.setDouble( "w2", 2 )
 				.executeUpdate();
