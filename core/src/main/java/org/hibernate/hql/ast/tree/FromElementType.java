@@ -334,13 +334,13 @@ class FromElementType {
 			if ( forceAlias ) {
 				return propertyMapping.toColumns( tableAlias, path );
 			}
-			else if ( fromElement.getWalker().getStatementType() == HqlSqlTokenTypes.SELECT ) {
+			if ( fromElement.getWalker().getStatementType() == HqlSqlTokenTypes.SELECT ) {
 				return propertyMapping.toColumns( tableAlias, path );
 			}
-			else if ( fromElement.getWalker().getCurrentClauseType() == HqlSqlTokenTypes.SELECT ) {
+			if ( fromElement.getWalker().getCurrentClauseType() == HqlSqlTokenTypes.SELECT ) {
 				return propertyMapping.toColumns( tableAlias, path );
 			}
-			else if ( fromElement.getWalker().isSubQuery() ) {
+			if ( fromElement.getWalker().isSubQuery() ) {
 				// for a subquery, the alias to use depends on a few things (we
 				// already know this is not an overall SELECT):
 				//      1) if this FROM_ELEMENT represents a correlation to the
@@ -366,11 +366,17 @@ class FromElementType {
 					return propertyMapping.toColumns( tableAlias, path );
 				}
 			}
-			else {
-				String[] columns = propertyMapping.toColumns( path );
-				log.trace( "Using non-qualified column reference [" + path + " -> (" + ArrayHelper.toString( columns ) + ")]" );
-				return columns;
+
+            if ( isManipulationQuery() && isMultiTable() && inWhereClause() ) {
+				// the actual where-clause will end up being ripped out the update/delete and used in
+				// a select to populate the temp table, so its ok to use the table alias to qualify the table refs
+				// and safer to do so to protect from same-named columns
+				return propertyMapping.toColumns( tableAlias, path );
 			}
+
+			String[] columns = propertyMapping.toColumns( path );
+			log.trace( "Using non-qualified column reference [" + path + " -> (" + ArrayHelper.toString( columns ) + ")]" );
+			return columns;
 		}
 	}
 
@@ -378,6 +384,15 @@ class FromElementType {
 		FromClause top = fromElement.getWalker().getFinalFromClause();
 		return fromElement.getFromClause() != fromElement.getWalker().getCurrentFromClause() &&
 	           fromElement.getFromClause() == top;
+	}
+
+	private boolean isManipulationQuery() {
+		return fromElement.getWalker().getStatementType() == HqlSqlTokenTypes.UPDATE
+			|| fromElement.getWalker().getStatementType() == HqlSqlTokenTypes.DELETE;
+	}
+
+	private boolean inWhereClause() {
+		return fromElement.getWalker().getCurrentTopLevelClauseType() == HqlSqlTokenTypes.WHERE;
 	}
 
 	private boolean isMultiTable() {
